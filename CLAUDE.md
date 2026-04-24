@@ -12,7 +12,6 @@ Cargo workspace with two crates and a build system:
 
 - **`syma/`** — The language: lexer, parser, evaluator, builtins, pattern engine, REPL, CLI
 - **`xtask/`** — Build system (cargo-xtask pattern). Orchestrates build, install, dist, test, lint, clean, and SystemFiles setup.
-- **`syma/src/rubi/`** — Rubi rule-based integration engine (inline module, enabled via `rubi` feature). Rules in `syma/rules/` embedded at compile time via `syma/build.rs`.
 - **`docs/software-architecture.md`** — Target modular architecture (SystemFiles, PackageManager, etc.)
 
 ## Build System (cargo-xtask)
@@ -21,7 +20,6 @@ Cargo workspace with two crates and a build system:
 # Primary build commands
 cargo xtask build                          # Build syma (debug)
 cargo xtask build --release                # Build syma (release)
-cargo xtask build --features rubi          # Build with Rubi integration engine
 
 # Install to $SYMA_HOME (default: ~/.syma)
 cargo xtask install                        # Build + install binary + create SystemFiles layout

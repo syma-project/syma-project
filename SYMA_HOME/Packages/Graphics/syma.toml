@@ -1,0 +1,10 @@
+[package]
+name = "Graphics"
+version = "0.1.0"
+description = "2D graphics: function plots, scatter plots, line plots, SVG rendering."
+entry = "Graphics.syma"
+
+[exports]
+symbols = ["Plot", "ListPlot", "ListLinePlot", "ExportGraphics", "Graphics",
+  "Show", "GraphicsGrid", "Line", "Point", "Circle", "Rectangle",
+  "RGBColor", "Hue", "Thickness", "PointSize", "Opacity", "Directive"]

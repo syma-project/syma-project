@@ -188,6 +188,10 @@ fn cmd_install() -> Result<()> {
     // Create SystemFiles skeleton
     create_sysfiles_skeleton(&home)?;
 
+    // Copy standard library Packages from repo
+    let packages_src = root.join("SYMA_HOME").join("Packages");
+    copy_packages_dir(&packages_src, &home.join("Packages"))?;
+
     println!("   Installed: {}", dest.display());
     println!();
     println!("   Add to PATH:");
@@ -225,6 +229,10 @@ fn cmd_dist() -> Result<()> {
 
     // Create SystemFiles skeleton in staging
     create_sysfiles_skeleton(&stage)?;
+
+    // Copy standard library Packages from repo
+    let packages_src = root.join("SYMA_HOME").join("Packages");
+    copy_packages_dir(&packages_src, &stage.join("Packages"))?;
 
     // Create archive
     let archive_name = format!("syma-{version}.tar.gz");
@@ -296,8 +304,13 @@ fn cmd_clean() -> Result<()> {
 
 fn cmd_setup_sysfiles() -> Result<()> {
     let home = syma_home();
+    let root = project_root()?;
     println!("   Creating SystemFiles in {}...", home.display());
     create_sysfiles_skeleton(&home)?;
+
+    let packages_src = root.join("SYMA_HOME").join("Packages");
+    copy_packages_dir(&packages_src, &home.join("Packages"))?;
+
     println!("   Done.");
     Ok(())
 }
@@ -340,5 +353,36 @@ fn create_sysfiles_skeleton(base: &Path) -> Result<()> {
         )?;
     }
 
+    Ok(())
+}
+
+/// Copy standard library Packages from the repo to $SYMA_HOME/Packages/.
+/// Only copies files that don't already exist at the destination (no overwrites).
+fn copy_packages_dir(src: &Path, dst: &Path) -> Result<()> {
+    if !src.exists() {
+        bail!(
+            "Packages directory not found at {}; did you run from the workspace root?",
+            src.display()
+        );
+    }
+    copy_dir_recursive(src, dst)?;
+    Ok(())
+}
+
+/// Recursively copy a directory, skipping files that already exist at the destination.
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        if file_type.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else if !dst_path.exists() {
+            fs::copy(&src_path, &dst_path)?;
+            println!("     Created: {}", dst_path.display());
+        }
+    }
     Ok(())
 }
