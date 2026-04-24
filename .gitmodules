@@ -1,0 +1,3 @@
+[submodule "syma"]
+	path = syma
+	url = https://github.com/syma-project/syma
