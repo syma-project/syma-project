@@ -154,7 +154,7 @@ module Combinatorics {
   partList[n_, max_] :=
     Flatten[Map[
       Function[{k},
-        Map[Function[{p}, Join[{k}, p]], partList[n - k, k])],
+        Map[Function[{p}, Join[{k}, p]], partList[n - k, k]]],
       Range[Min[n, max], 1, -1]
     ], 1];
 

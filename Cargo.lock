@@ -587,6 +587,7 @@ dependencies = [
  "cranelift-module",
  "fastrand",
  "image",
+ "libc",
  "rug",
  "rustyline",
  "serde",
