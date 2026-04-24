@@ -7,4 +7,6 @@ entry = "Combinatorics.syma"
 [exports]
 symbols = ["Factorial2", "Binomial", "Multinomial", "CatalanNumber",
   "Subsets", "Combinations", "Permutations", "Tuples",
-  "StirlingS1", "StirlingS2", "BellB"]
+  "StirlingS1", "StirlingS2", "BellB",
+  "Fibonacci", "LucasL", "Subfactorial",
+  "HarmonicNumber", "PartitionsP", "IntegerPartitions", "Signature"]
