@@ -4,5 +4,6 @@
 module LinearAlgebra {
   export Dimensions, Dot, MatrixMultiply, IdentityMatrix, Det,
          Inverse, Transpose, Tr, Norm, Cross, LinearSolve,
-         Eigenvalues, MatrixPower, ArrayFlatten
+         MatrixPower, Eigenvalues, Eigenvectors, ArrayFlatten,
+         ZeroMatrix, DiagonalMatrix, UnitVector
 }

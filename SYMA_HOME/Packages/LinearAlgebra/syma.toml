@@ -1,10 +1,11 @@
 [package]
 name = "LinearAlgebra"
-version = "0.1.0"
-description = "Linear algebra operations: matrix arithmetic, determinants, inverses, linear solvers."
+version = "0.2.0"
+description = "Linear algebra operations: matrix arithmetic, determinants, inverses, linear solvers, eigenvalues, and matrix construction utilities."
 entry = "LinearAlgebra.syma"
 
 [exports]
 symbols = ["Dimensions", "Dot", "MatrixMultiply", "IdentityMatrix", "Det",
   "Inverse", "Transpose", "Tr", "Norm", "Cross", "LinearSolve",
-  "Eigenvalues", "MatrixPower", "ArrayFlatten"]
+  "MatrixPower", "Eigenvalues", "Eigenvectors", "ArrayFlatten",
+  "ZeroMatrix", "DiagonalMatrix", "UnitVector"]

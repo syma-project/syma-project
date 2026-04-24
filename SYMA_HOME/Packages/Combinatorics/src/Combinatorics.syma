@@ -1,0 +1,91 @@
+module Combinatorics {
+  export Factorial2, Binomial, Multinomial, CatalanNumber,
+         Subsets, Combinations, Permutations, Tuples,
+         StirlingS1, StirlingS2, BellB;
+
+  (* ── Double factorial: n!! ──────────────────────────────────────── *)
+  Factorial2[n_Integer /; n <= 1] := 1;
+  Factorial2[n_Integer] := n * Factorial2[n - 2];
+
+  (* ── Binomial coefficient ────────────────────────────────────────── *)
+  Binomial[n_Integer, 0] := 1;
+  Binomial[n_Integer, k_Integer /; k == n] := 1;
+  Binomial[n_Integer, k_Integer /; k < 0 || k > n] := 0;
+  Binomial[n_Integer, k_Integer /; k > n - k] := Binomial[n, n - k];
+
+  Binomial[n_Integer, k_Integer] := binomialLoop[n, k, 1, 1];
+
+  binomialLoop[n_, k_, i_ /; i <= k, acc_] := binomialLoop[n, k, i + 1, Floor[acc * (n - k + i) / i]];
+  binomialLoop[n_, k_, i_ /; i > k, acc_] := acc;
+
+  (* ── Multinomial coefficient ──────────────────────────────────────── *)
+  Multinomial[args__Integer] := multinomialHelper[{args}, Total[{args}]];
+
+  multinomialHelper[{x_Integer}, _] := 1;
+  multinomialHelper[{x_Integer, y__Integer}, total_] :=
+    Binomial[total, x] * multinomialHelper[{y}, total - x];
+  multinomialHelper[{}, _] := 1;
+
+  (* ── Catalan number ──────────────────────────────────────────────── *)
+  CatalanNumber[n_Integer /; n >= 0] := Binomial[2*n, n] / (n + 1);
+  CatalanNumber[_] := 0;
+
+  (* ── Subsets (power set) ─────────────────────────────────────────── *)
+  Subsets[{}] := {{}};
+  Subsets[{x_, y___}] := Function[{rest},
+    Join[rest, Map[Function[{s}, Join[{x}, s]], rest]]
+  ][Subsets[{y}]];
+
+  (* ── Combinations (k-subsets) ────────────────────────────────────── *)
+  Combinations[_, 0] := {{}};
+  Combinations[{}, _] := {};
+  Combinations[{x_, y___}, k_] := Join[
+    Map[Function[{c}, Join[{x}, c]], Combinations[{y}, k - 1]],
+    Combinations[{y}, k]
+  ];
+
+  (* ── Permutations ────────────────────────────────────────────────── *)
+  insertEverywhere[x_, {}] := {{x}};
+  insertEverywhere[x_, {y_, z___}] := Join[
+    {Join[{x}, {y, z}]},
+    Map[Function[{p}, Join[{y}, p]], insertEverywhere[x, {z}]]
+  ];
+
+  Permutations[{}] := {{}};
+  Permutations[{x_, y___}] := Flatten[
+    Map[Function[{p}, insertEverywhere[x, p]], Permutations[{y}]],
+    1
+  ];
+
+  (* ── Tuples (n-tuples from a set) ────────────────────────────────── *)
+  Tuples[_, 0] := {{}};
+  Tuples[list_, 1] := Map[Function[{x}, {x}], list];
+  Tuples[list_, n_] := Flatten[
+    Map[Function[{t},
+      Map[Function[{x}, Join[t, {x}]], list]
+    ], Tuples[list, n - 1]],
+    1
+  ];
+
+  (* ── Stirling numbers of the 1st kind (unsigned) ──────────────────── *)
+  StirlingS1[0, 0] := 1;
+  StirlingS1[n_Integer /; n > 0, 0] := 0;
+  StirlingS1[0, k_Integer /; k > 0] := 0;
+  StirlingS1[n_Integer, k_Integer /; k > n] := 0;
+  StirlingS1[n_Integer, k_Integer] := StirlingS1[n - 1, k - 1] + (n - 1) * StirlingS1[n - 1, k];
+  StirlingS1[_, _] := 0;
+
+  (* ── Stirling numbers of the 2nd kind ──────────────────────────────── *)
+  StirlingS2[0, 0] := 1;
+  StirlingS2[n_Integer /; n > 0, 0] := 0;
+  StirlingS2[0, k_Integer /; k > 0] := 0;
+  StirlingS2[n_Integer, k_Integer /; k > n] := 0;
+  StirlingS2[n_Integer, k_Integer] := StirlingS2[n - 1, k - 1] + k * StirlingS2[n - 1, k];
+  StirlingS2[_, _] := 0;
+
+  (* ── Bell numbers ────────────────────────────────────────────────── *)
+  range0[n_] := Join[{0}, Range[n]];
+
+  BellB[n_Integer /; n >= 0] := Total[Map[Function[{k}, StirlingS2[n, k]], range0[n]]];
+  BellB[_] := 0;
+}
