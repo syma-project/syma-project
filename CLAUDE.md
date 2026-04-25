@@ -90,10 +90,9 @@ cargo test --test cli                    # Integration tests only
 
 ### What's Not Yet Implemented
 
-- Class/module evaluation (parsed but only stores a symbol marker)
-- Guard condition evaluation in pattern matching (inner pattern matches but guard isn't evaluated)
-- Pure function (`#`/`#1`) evaluation is basic
-- Most symbolic functions (`Simplify`, `Expand`, `Factor`, `Solve`, `Series`) are stubs
+- `@transform` class member type (lexer/parser/AST ready, evaluator skips)
+- Pure function `##` slot sequence, `#0` (function self-reference)
+- `Simplify` is basic; advanced symbolic manipulation (e.g., trig identities) is limited
 - Bytecode compilation and JIT (future phases)
 - The modular `PackageManager` architecture described in `docs/software-architecture.md` (currently everything is eagerly registered via `register_builtins()`)
 

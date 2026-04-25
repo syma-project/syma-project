@@ -131,18 +131,19 @@ module Combinatorics {
   (* p(n) = sum_{k≠0} (-1)^{k+1} p(n - k(3k-1)/2) *)
   PartitionsP[0] := 1;
   PartitionsP[n_Integer /; n < 0] := 0;
-  PartitionsP[n_Integer /; n > 0] := partitionsRec[n];
+  PartitionsP[n_Integer /; n > 0] := pentagonalSum[n, 1];
 
-  partitionsRec[n_] := partitionsSum[n, 1, 0];
+  (* Sum over generalized pentagonal numbers k = 1, -1, 2, -2, ... *)
+  pentagonalSum[n_, k_] :=
+    If[k*(3*k-1)/2 > n, 0,
+      (If[Mod[k, 2] == 1, 1, -1] * recursiveP[n - k*(3*k-1)/2])
+        + pentagonalSum[n, If[k > 0, -k, -k + 1]]
+    ];
 
-  (* Accumulate over k = 1, -1, 2, -2, ... until pentagonal > n *)
-  partitionsSum[n_, k_, acc_] :=
-    Function[{pent}, If[pent > n, acc,
-      Function[{sign},
-        partitionsSum[n, If[k > 0, -k, -k + 1],
-          acc + sign * PartitionsP[n - pent]]
-      ][If[Mod[k, 2] == 1, 1, -1]]
-    ]][k * (3 * k - 1) / 2];
+  (* Internal recursive P(n) to avoid cross-reference issues *)
+  recursiveP[0] := 1;
+  recursiveP[n_Integer /; n < 0] := 0;
+  recursiveP[n_Integer /; n > 0] := pentagonalSum[n, 1];
 
   (* ── Integer Partitions ───────────────────────────────────────────── *)
   IntegerPartitions[0] := {{}};
@@ -155,7 +156,7 @@ module Combinatorics {
     Flatten[Map[
       Function[{k},
         Map[Function[{p}, Join[{k}, p]], partList[n - k, k]]],
-      Range[Min[n, max], 1, -1]
+      Range[Min[n, max], -1, 1]
     ], 1];
 
   (* ── Signature of a permutation ──────────────────────────────────── *)
