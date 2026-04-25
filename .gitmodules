@@ -4,3 +4,6 @@
 [submodule "syma-lsp"]
 	path = syma-lsp
 	url = https://github.com/syma-project/syma-lsp
+[submodule "syma-py"]
+	path = syma-py
+	url = https://github.com/syma-project/syma-py
