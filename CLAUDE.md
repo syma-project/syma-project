@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Syma** is a symbolic-first programming language inspired by Wolfram Language, written in Rust (edition 2024). Currently a tree-walk interpreter with REPL. The full language specification is in `syma/syma-lang.md` (1200+ lines, includes EBNF grammar) — that file is the source of truth for syntax and semantics.
+**Syma** is a symbolic-first programming language inspired by Wolfram Language, written in Rust (edition 2024). Multi-tier execution: tree-walk interpreter → bytecode VM → JIT via Cranelift. Includes REPL, kernel mode (JSON stdio), and DAP debugger. The full language specification is in `syma/syma-lang.md` (1200+ lines, includes EBNF grammar) — that file is the source of truth for syntax and semantics.
 
 ## Workspace Structure
 
@@ -65,7 +65,7 @@ cargo test --test cli                    # Integration tests only
 
 ## Architecture
 
-**Pipeline:** `Source → Lexer → Parser → AST → Evaluator → Value`
+**Pipeline (3 tiers):** `Source → Lexer → Parser → AST → Evaluator → Value` (tree-walk, default). Hot functions auto-promote to `AST → Bytecode → VM → Value`. Optional JIT: `Bytecode → Cranelift → Native → Value`.
 
 ### Key Modules (in `syma/src/`)
 
@@ -79,6 +79,8 @@ cargo test --test cli                    # Integration tests only
 - **`builtins/`** — Core library split by domain: `arithmetic`, `comparison`, `logical`, `list`, `string`, `math`, `pattern`, `association`, `symbolic`, `random`, `io`, `error`, `parallel`, `ffi`, `filesystem`.
 - **`kernel.rs`** — JSON-over-stdin/stdout kernel mode for IDE integration.
 - **`debug.rs`** — DAP (Debug Adapter Protocol) support.
+- **`bytecode/`** — Bytecode compiler (`compiler.rs`) compiles hot functions to register-based bytecode. VM (`vm.rs`) executes it. Sits between tree-walk and JIT.
+- **`jit/`** — Cranelift JIT backend. Compiles bytecode to native machine code. Behind `"jit"` feature flag.
 - **`cli.rs`** — Package scaffolding (`syma new`), build, run, dependency management commands.
 
 ### Key Design Decisions
@@ -91,9 +93,7 @@ cargo test --test cli                    # Integration tests only
 ### What's Not Yet Implemented
 
 - `@transform` class member type (lexer/parser/AST ready, evaluator skips)
-- Pure function `##` slot sequence, `#0` (function self-reference)
 - `Simplify` is basic; advanced symbolic manipulation (e.g., trig identities) is limited
-- Bytecode compilation and JIT (future phases)
 - The modular `PackageManager` architecture described in `docs/software-architecture.md` (currently everything is eagerly registered via `register_builtins()`)
 
 ## CI
