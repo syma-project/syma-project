@@ -188,8 +188,11 @@ fn cmd_install() -> Result<()> {
     // Create SystemFiles skeleton
     create_sysfiles_skeleton(&home)?;
 
+    // Copy SystemFiles content from repo (D.syma, etc.)
+    copy_sysfiles_content(&root, &home)?;
+
     // Copy standard library Packages from repo
-    let packages_src = root.join("SYMA_HOME").join("Packages");
+    let packages_src = root.join("syma").join("Packages");
     copy_packages_dir(&packages_src, &home.join("Packages"))?;
 
     println!("   Installed: {}", dest.display());
@@ -230,8 +233,11 @@ fn cmd_dist() -> Result<()> {
     // Create SystemFiles skeleton in staging
     create_sysfiles_skeleton(&stage)?;
 
+    // Copy SystemFiles content from repo (D.syma, etc.)
+    copy_sysfiles_content(&root, &stage)?;
+
     // Copy standard library Packages from repo
-    let packages_src = root.join("SYMA_HOME").join("Packages");
+    let packages_src = root.join("syma").join("Packages");
     copy_packages_dir(&packages_src, &stage.join("Packages"))?;
 
     // Create archive
@@ -308,7 +314,7 @@ fn cmd_setup_sysfiles() -> Result<()> {
     println!("   Creating SystemFiles in {}...", home.display());
     create_sysfiles_skeleton(&home)?;
 
-    let packages_src = root.join("SYMA_HOME").join("Packages");
+    let packages_src = root.join("syma").join("Packages");
     copy_packages_dir(&packages_src, &home.join("Packages"))?;
 
     println!("   Done.");
@@ -353,6 +359,19 @@ fn create_sysfiles_skeleton(base: &Path) -> Result<()> {
         )?;
     }
 
+    Ok(())
+}
+
+/// Copy SystemFiles content from the syma repo into the install/dist location.
+/// This copies Kernel/Calculus/D.syma and any future .syma kernel files.
+fn copy_sysfiles_content(root: &Path, base: &Path) -> Result<()> {
+    let sysfiles_src = root.join("syma").join("SystemFiles");
+    if !sysfiles_src.exists() {
+        return Ok(()); // Nothing to copy during development
+    }
+
+    let sysfiles_dst = base.join("SystemFiles");
+    copy_dir_recursive(&sysfiles_src, &sysfiles_dst)?;
     Ok(())
 }
 
