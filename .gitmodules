@@ -8,5 +8,5 @@
 	path = syma-py
 	url = https://github.com/syma-project/syma-py
 [submodule "vscode-syma"]
-	url = https://github.com/syma-project/vscode-syma
 	path = vscode-syma
+	url = https://github.com/syma-project/vscode-syma

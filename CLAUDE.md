@@ -28,7 +28,7 @@ cargo xtask install --release              # Release build + install
 # Distribution
 cargo xtask dist                           # Create target/dist/syma-0.1.0.tar.gz
 
-# Development
+# Development (conduct a whole test if expensive and slow, test specific modules with cargo test)
 cargo xtask test                           # Run all tests (cargo test --locked --workspace)
 cargo xtask lint                           # fmt --check + clippy -- -D warnings
 cargo xtask clean                          # Clean target/
