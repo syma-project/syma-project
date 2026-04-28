@@ -15,9 +15,9 @@ Today, Syma compiles everything into one binary:
 ```
 cargo build → syma (single executable)
   ├── lexer, parser, evaluator, pattern engine   ← always needed
-  ├── ~100 builtins (arithmetic, list, string…)  ← always loaded
-  ├── 185 RUBI rule files (1.9MB)                ← embedded at compile time
-  └── FFI, parallel, IO subsystems               ← always linked
+   ├── 200+ builtins across 40 domains            ← always loaded
+   ├── RUBI integration engine                    ← planned, not yet implemented
+   └── FFI, parallel, IO subsystems               ← always linked
 ```
 
 As the language grows — more builtins, more rule sets, format converters,
@@ -25,7 +25,7 @@ visualization, database access, external library bindings — this approach fail
 
 - **Binary size** grows linearly with features
 - **Startup time** pays for everything even if you only use arithmetic
-- **Compile time** increases (RUBI rules alone trigger a build.rs pass)
+- **Compile time** increases
 - **No user extensibility** — you can't add new system modules without
   recompiling
 
@@ -377,7 +377,7 @@ syma binary starts
 
 ### 5.4 Builtins Migration Strategy
 
-Today's `builtins/mod.rs` has a single `register_builtins()` that registers ~100
+Today's `builtins/mod.rs` has a single `register_builtins()` that registers 200+
 functions. The migration splits this into per-domain loader functions:
 
 ```rust
@@ -622,60 +622,6 @@ Time ─────────────────────────
 
 ---
 
-## 6. RUBI: From Embedded to On-Disk
-
-### Current State
-
-```
-build.rs
-  └── Reads src/rubi/rules/**/*.m (185 files, 1.9MB)
-  └── Generates OUT_DIR/rules_data.rs with include_str!() for each file
-  └── Compiled into binary → always present in memory
-
-src/rubi/mod.rs
-  └── include!(concat!(env!("OUT_DIR"), "/rules_data.rs"))
-  └── builtin_rules() parses all .m files at first Integrate call
-  └── Rules live in a global OnceLock<Mutex<RubiEngine>>
-```
-
-### Target State
-
-```
-SystemFiles/Data/Rubi/
-  ├── index.toml                    # Category index
-  ├── 1 Algebraic functions/
-  │   ├── 1.1 Binomial products/
-  │   │   ├── 1.1.1 Linear.m
-  │   │   └── …
-  │   └── …
-  └── 9 Miscellaneous/
-
-src/rubi/mod.rs
-  └── register_integrate_lazy()
-      └── On first Integrate call:
-          ├── Read SystemFiles/Data/Rubi/index.toml
-          ├── Parse .m files from disk
-          ├── Build RubiEngine
-          └── Install in global OnceLock
-```
-
-**What changes:**
-
-| Aspect | Before | After |
-|--------|--------|-------|
-| Rule storage | Embedded in binary via `include_str!()` | On disk in `SystemFiles/Data/Rubi/` |
-| Binary size | +1.9MB from rules | No change |
-| Startup | Rules parsed on first `Integrate` | Same (lazy) |
-| `build.rs` | Generates `rules_data.rs` | Not needed for RUBI |
-| `Cargo.toml` | `rubi` feature flag | Not needed |
-| Update rules | Recompile | Copy new `.m` files |
-
-The `RubiEngine` itself (`src/rubi/engine.rs`, `parser.rs`, `wl_ast.rs`,
-`helpers.rs`) stays as compiled Rust — it's the pattern matching and evaluation
-engine. Only the *data* (the `.m` rule files) moves to disk.
-
----
-
 ## 7. Standard Library Packages
 
 Standard library packages live under `$SYMA_HOME/Packages/` and follow the
@@ -851,14 +797,12 @@ process. Each step is independently shippable.
 - Control flow builtins (`If`, `Which`, `For`, `While`) stay eager (always needed)
 - **Goal:** Startup time reduced, binary still monolithic
 
-### Phase 3: RUBI to Disk
+### Phase 3: RUBI Integration
 
-- Move `src/rubi/rules/` to `SystemFiles/Data/Rubi/`
-- Remove `build.rs` RUBI embedding code
-- Remove `rubi` feature flag from `Cargo.toml`
-- `src/rubi/mod.rs` loads rules from `$SYMA_HOME/SystemFiles/Data/Rubi/`
+- Implement RubiEngine that reads `.m` rule files from `SystemFiles/Data/Rubi/`
+- Wire `Integrate` to call RubiEngine on first use (lazy loading)
 - `init.toml` declares the `rubi` module with `lazy = true`
-- **Goal:** RUBI rules are a data dependency, not a compile dependency
+- **Goal:** RUBI rules are an on-disk data dependency loaded at runtime
 
 ### Phase 4: Standard Library Packages
 

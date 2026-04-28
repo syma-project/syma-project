@@ -25,7 +25,19 @@ syma/                         # Language crate
 │   ├── value.rs              # Value enum — runtime types
 │   ├── pattern.rs            # Pattern matching engine (blanks, sequences, guards)
 │   ├── env.rs                # Lexical scoping via Rc<RefCell<Scope>> chains
-│   ├── builtins/
+│   ├── profiler.rs           # JIT hotness tracking, tiering config
+│   ├── polynomial.rs         # Polynomial arithmetic, Sturm sequences, root finding
+│   ├── messages.rs           # Wolfram-style message system
+│   ├── bytecode/             # Bytecode VM (Tier 2 execution)
+│   │   ├── mod.rs            # Bytecode module root
+│   │   ├── compiler.rs       # AST → bytecode compilation
+│   │   ├── instruction.rs    # Bytecode instruction set
+│   │   └── vm.rs             # Bytecode virtual machine
+│   ├── jit/                  # Native JIT compiler (Tier 3 execution)
+│   │   ├── mod.rs            # JIT module root
+│   │   ├── compiler.rs       # Bytecode → native code via Cranelift
+│   │   └── runtime.rs        # JIT runtime management
+│   ├── builtins/             # 40 domain modules, 200+ builtins
 │   │   ├── mod.rs            # register_builtins() orchestrator, help system
 │   │   ├── arithmetic.rs     # Plus, Times, Power, Divide, Minus, Abs
 │   │   ├── comparison.rs     # Equal, Unequal, Less, Greater, etc.
@@ -36,11 +48,13 @@ syma/                         # Language crate
 │   │   ├── pattern.rs        # MatchQ, Head, TypeOf, FreeQ
 │   │   ├── association.rs    # Keys, Values, Lookup, KeyExistsQ
 │   │   ├── symbolic.rs       # Simplify, Expand, D (differentiation), Integrate, etc.
+│   │   ├── symbolicmanip.rs  # Additional symbolic manipulation utilities
 │   │   ├── random.rs         # RandomInteger, RandomReal, RandomChoice
 │   │   ├── graphics.rs       # SVG renderer, GraphicsStyle directives, ListPlot
 │   │   ├── io/
 │   │   │   ├── mod.rs        # Print, Input, Write, ReadString, WriteString, PrintF
 │   │   │   ├── export.rs     # Export — dispatches by extension (.svg, .json, …)
+│   │   │   ├── formats.rs    # Format utility helpers for I/O
 │   │   │   ├── import.rs     # Import — dispatches by extension (.json, .nb, .m, …)
 │   │   │   └── nb.rs         # .nb notebook parser (WL expression → code extraction)
 │   │   ├── filesystem.rs     # FileNames, FileExistsQ, FileNameJoin, DirectoryQ, etc.
@@ -51,13 +65,32 @@ syma/                         # Language crate
 │   │   ├── statistics.rs     # Mean, Median, Variance, StandardDeviation
 │   │   ├── localsymbol.rs    # LocalSymbol — persistent cross-session storage
 │   │   ├── format.rs         # InputForm/OutputForm string formatting
-│   │   └── random.rs         # Random primitives
-│   ├── ffi/
+│   │   ├── algebraic.rs      # Algebraic number operations
+│   │   ├── calendar.rs       # Date/time functions
+│   │   ├── charting.rs       # Charting primitives
+│   │   ├── clearing.rs       # Clear, ClearAll, Unset
+│   │   ├── combinatorics.rs  # Factorial variants, permutations
+│   │   ├── dataset.rs        # Structured data operations
+│   │   ├── developer.rs      # Developer/inspection utilities
+│   │   ├── discrete.rs       # Discrete math functions
+│   │   ├── domains.rs        # Element, Refine, Assuming domain assertions
+│   │   ├── expression.rs     # Expression manipulation utilities
+│   │   ├── image.rs          # Image processing
+│   │   ├── integration.rs    # Numerical integration
+│   │   ├── names.rs          # Symbol management
+│   │   ├── noncommutative.rs # NonCommutativeMultiply, Commutator
+│   │   ├── number_theory.rs  # Primes, number-theoretic functions
+│   │   ├── numericsolve.rs   # Numerical equation solving
+│   │   ├── operators.rs      # Operator system
+│   │   ├── specialfunctions.rs # Bessel, Gamma, Zeta, etc.
+│   │   └── systeminfo.rs     # System information and diagnostics
+│   ├── ffi/                  # FFI subsystem
 │   │   ├── mod.rs            # FFI module root
 │   │   ├── extension.rs      # Native extension loader (dlopen/dlsym)
 │   │   ├── loader.rs         # Dynamic library loading helpers
 │   │   ├── marshal.rs        # JSON ↔ Value marshalling
-│   │   └── python.rs         # Python bridge (subprocess)
+│   │   ├── python.rs         # Python bridge (subprocess)
+│   │   └── bridge.py         # Python-side helper script
 │   ├── cli.rs                # Package scaffolding commands
 │   ├── debug.rs              # DAP (Debug Adapter Protocol)
 │   ├── kernel.rs             # JSON-over-stdin/stdout kernel mode
@@ -70,8 +103,10 @@ syma/                         # Language crate
 
 xtask/                        # Build system (cargo-xtask)
 ├── src/
-│   ├── main.rs               # Subcommands: build, install, dist, test, lint, clean
-│   └── setup.rs              # SystemFiles skeleton creation
+│   └── main.rs               # All subcommands inline: build, install, dist, test, lint, clean, setup-sysfiles
+
+syma-lsp/                     # Language Server Protocol implementation
+syma-py/                      # Python bindings
 
 docs/
 ├── software-architecture.md  # Target modular architecture (future state)
@@ -81,7 +116,10 @@ docs/
 ### What Each Pipeline Stage Does
 
 ```
-Source (text) ──► Lexer ──► Tokens ──► Parser ──► AST (Expr) ──► Evaluator ──► Value
+Source (text) ──► Lexer ──► Tokens ──► Parser ──► AST (Expr)
+  ├─► Tree-walk evaluator  (default, Tier 1) ──► Value
+  ├─► Bytecode compiler → VM (hot functions, Tier 2) ──► Value
+  └─► Cranelift JIT        (Tier 3, behind "jit" feature) ──► Value
 ```
 
 | Stage | File | Input | Output |
@@ -836,8 +874,14 @@ Subtraction is syntactic sugar. Unary `-x` is `Times[-1, x]`.
 
 ## 12. Performance Notes
 
-- **Tree-walk interpreter**: Currently Phase 1 — no bytecode or JIT. Performance
-  is O(expression depth) per evaluation.
+- **Three-tier execution model (Phase 1-3):**
+  - Tier 1: Tree-walk interpreter — default path, O(expression depth) per evaluation.
+  - Tier 2: Bytecode VM — hot functions auto-promote from tree-walk to bytecode.
+    See `bytecode/` (compiler.rs, vm.rs, instruction.rs).
+  - Tier 3: Native JIT via Cranelift — bytecode compiles to native machine code.
+    Behind the `"jit"` feature flag. See `jit/` (compiler.rs, runtime.rs).
+  - `profiler.rs` implements tiering: tracks call counts and execution time per
+    function, promotes to Tier 2/3 when thresholds are exceeded.
 - **Pattern matching is recursive**: Deeply nested patterns can cause stack
   recursion. Be mindful of very large expressions.
 - **`rug` operations**: GMP integers are fast for large numbers but the
@@ -856,6 +900,9 @@ If you're new to the codebase, read the files in this order:
 3. **`lexer.rs`** — How source text becomes tokens
 4. **`parser.rs`** — How tokens become AST
 5. **`eval/mod.rs`** — How AST becomes Value (the heart of the system)
+5.5. **`bytecode/mod.rs`** — Bytecode representation and VM
+5.6. **`jit/mod.rs`** — Cranelift JIT compilation
+5.7. **`profiler.rs`** — Hotness tracking and tiering
 6. **`env.rs`** — Variable scoping
 7. **`pattern.rs`** — Pattern matching engine
 8. **`builtins/mod.rs`** — Builtin registration orchestration
@@ -863,3 +910,5 @@ If you're new to the codebase, read the files in this order:
 10. **`builtins/arithmetic.rs`** — A simple builtin module
 11. **`builtins/symbolic.rs`** — Complex builtins (differentiation, integration)
 12. **`cli.rs`** — CLI and REPL entry point
+14. **`polynomial.rs`** — Polynomial arithmetic and algebraic root finding
+15. **`messages.rs`** — Wolfram-style message system
