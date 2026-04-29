@@ -1,0 +1,13 @@
+[book]
+title = "Syma Language"
+description = "A symbolic-first programming language inspired by Wolfram Language"
+authors = ["Syma Contributors"]
+language = "en"
+
+[build]
+create-missing = false
+
+[output.html]
+no-section-label = true
+git-repository-url = "https://github.com/syma-project/syma"
+edit-url-template = "https://github.com/syma-project/syma/edit/main/book/{path}"
