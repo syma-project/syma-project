@@ -326,7 +326,7 @@ Syma is in active development. Current phase: **tree-walk interpreter with REPL 
 **Working:**
 - Full lexer/parser with Wolfram-compatible syntax
 - Pattern matching (blanks, sequences, type constraints, alternatives, guards)
-- 390+ built-in functions across 28 modules
+- 800+ built-in functions across 40 modules
 - Rule-based symbolic integration via Rubi (185+ rule files)
 - Pattern-based symbolic simplification, expansion, and factoring
 - Symbolic differentiation and series expansion
