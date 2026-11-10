@@ -1,2 +1,8 @@
 [alias]
 xtask = "run --package xtask --"
+
+# pyo3 searches for `python` before `python3`; on this image `python` is a 3.9
+# build without an unversioned libpython symlink, which breaks linking the
+# syma-py test binary. Point pyo3 at `python3` so `cargo test -p syma-py` links.
+[env]
+PYO3_PYTHON = "python3"

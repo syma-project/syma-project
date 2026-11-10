@@ -76,6 +76,39 @@ fn dirs_home() -> Option<PathBuf> {
     env::var_os("HOME").map(PathBuf::from)
 }
 
+/// Directory cargo writes build artifacts to, honouring `CARGO_TARGET_DIR`.
+/// A relative `CARGO_TARGET_DIR` is resolved against the workspace root, which
+/// is the working directory used for every cargo invocation below.
+fn target_dir(root: &Path) -> PathBuf {
+    match env::var_os("CARGO_TARGET_DIR") {
+        Some(dir) => {
+            let path = PathBuf::from(dir);
+            if path.is_absolute() {
+                path
+            } else {
+                root.join(path)
+            }
+        }
+        None => root.join("target"),
+    }
+}
+
+/// The syma crate's version, read from its manifest.
+fn syma_version(root: &Path) -> String {
+    let manifest = root.join("syma").join("Cargo.toml");
+    fs::read_to_string(&manifest)
+        .ok()
+        .and_then(|contents| {
+            contents.lines().find_map(|line| {
+                line.trim()
+                    .strip_prefix("version")
+                    .and_then(|rest| rest.trim_start().strip_prefix('='))
+                    .map(|v| v.trim().trim_matches('"').to_string())
+            })
+        })
+        .unwrap_or_else(|| "0.0.0".to_string())
+}
+
 fn cargo() -> Command {
     Command::new(env::var("CARGO").unwrap_or_else(|_| "cargo".to_string()))
 }
@@ -98,7 +131,6 @@ fn cmd_build() -> Result<()> {
     let root = project_root()?;
     let args: Vec<String> = env::args().skip(2).collect();
 
-    let mut cargo_args = vec!["build", "--package", "syma"];
     let mut release = false;
     let mut features = Vec::new();
 
@@ -117,27 +149,22 @@ fn cmd_build() -> Result<()> {
         i += 1;
     }
 
+    // Declared before `cargo_args` so the `&str` borrow outlives the call.
+    let features_str = features.join(",");
+
+    let mut cargo_args = vec!["build", "--package", "syma"];
     if release {
         cargo_args.push("--release");
     }
     if !features.is_empty() {
         cargo_args.push("--features");
-        // We need to leak the string to get a &'static str for the args slice.
-        // This is fine for a build tool that runs once.
-        let features_str = features.join(",");
-        cargo_args.push(leak_str(&features_str));
+        cargo_args.push(&features_str);
     }
 
     println!("   Building syma...");
     run_cargo(&cargo_args, &root)?;
     println!("   Done.");
     Ok(())
-}
-
-/// Leak a string to get a `&'static str`. Acceptable for short-lived xtask processes.
-fn leak_str(s: &String) -> &'static str {
-    // SAFETY: xtask is a short-lived process, leaking a few strings is fine.
-    unsafe { &*(s as *const String).cast::<&'static str>() }
 }
 
 // ── install ─────────────────────────────────────────────────────────────────
@@ -162,7 +189,7 @@ fn cmd_install() -> Result<()> {
 
     // Locate the built binary
     let profile = if release { "release" } else { "debug" };
-    let binary = root.join("target").join(profile).join("syma");
+    let binary = target_dir(&root).join(profile).join("syma");
     if !binary.exists() {
         bail!("binary not found at {}", binary.display());
     }
@@ -211,14 +238,14 @@ fn cmd_dist() -> Result<()> {
     println!("   Building release...");
     run_cargo(&["build", "--package", "syma", "--release"], &root)?;
 
-    let binary = root.join("target").join("release").join("syma");
+    let binary = target_dir(&root).join("release").join("syma");
     if !binary.exists() {
         bail!("release binary not found at {}", binary.display());
     }
 
     // Create staging directory
-    let dist_dir = root.join("target").join("dist");
-    let version = "0.1.0"; // TODO: read from Cargo.toml
+    let dist_dir = target_dir(&root).join("dist");
+    let version = syma_version(&root);
     let stage = dist_dir.join(format!("syma-{version}"));
     if stage.exists() {
         fs::remove_dir_all(&stage)?;
@@ -246,13 +273,11 @@ fn cmd_dist() -> Result<()> {
 
     println!("   Creating {}...", archive_name);
     let status = Command::new("tar")
-        .args([
-            "-czf",
-            archive_path.to_str().unwrap(),
-            "-C",
-            dist_dir.to_str().unwrap(),
-            &format!("syma-{version}"),
-        ])
+        .arg("-czf")
+        .arg(&archive_path)
+        .arg("-C")
+        .arg(&dist_dir)
+        .arg(format!("syma-{version}"))
         .status()?;
 
     if !status.success() {
@@ -296,10 +321,10 @@ fn cmd_clean() -> Result<()> {
     println!("   Cleaning build artifacts...");
     run_cargo(&["clean"], &root)?;
 
-    let dist_dir = root.join("target").join("dist");
+    let dist_dir = target_dir(&root).join("dist");
     if dist_dir.exists() {
         fs::remove_dir_all(&dist_dir)?;
-        println!("   Removed target/dist/");
+        println!("   Removed {}/", dist_dir.display());
     }
 
     println!("   Done.");
@@ -404,4 +429,45 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn syma_version_is_read_from_manifest() {
+        let root = project_root().unwrap();
+        let version = syma_version(&root);
+        assert_ne!(
+            version, "0.0.0",
+            "version should be parsed from syma/Cargo.toml"
+        );
+        assert!(
+            version.split('.').count() >= 2,
+            "unexpected version: {version}"
+        );
+    }
+
+    #[test]
+    fn target_dir_honours_absolute_and_relative_env() {
+        // SAFETY: this test binary is the only writer of CARGO_TARGET_DIR.
+        unsafe { env::set_var("CARGO_TARGET_DIR", "/tmp/syma-target") };
+        assert_eq!(
+            target_dir(Path::new("/root")),
+            PathBuf::from("/tmp/syma-target")
+        );
+
+        unsafe { env::set_var("CARGO_TARGET_DIR", "build-out") };
+        assert_eq!(
+            target_dir(Path::new("/root")),
+            PathBuf::from("/root/build-out")
+        );
+
+        unsafe { env::remove_var("CARGO_TARGET_DIR") };
+        assert_eq!(
+            target_dir(Path::new("/root")),
+            PathBuf::from("/root/target")
+        );
+    }
 }
