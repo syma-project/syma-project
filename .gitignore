@@ -76,3 +76,6 @@ htmlcov/
 .dmypy.json
 dmypy.json
 .pyre/
+
+.progress-cron.log
+.wake-cron.log

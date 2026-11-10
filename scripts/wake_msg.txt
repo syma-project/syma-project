@@ -1,0 +1,8 @@
+【定时唤醒 · 每30分钟】
+你是 Syma 长期计划（docs/LONG_TERM_PLAN.md，R1–R128）的执行者。请做一次巡检并继续推进，不要重复已完成轮次：
+
+1. 读进度：`tail -40 docs/PROGRESS_LOG.md` 与 `cat docs/NEXT_ACTIONS.md`。
+2. 看仓库：`git -C syma status --porcelain`、`git -C syma log --oneline -3`。
+3. 若有未提交改动：跑 `scripts/gate.sh`（fmt+clippy+workspace+语料）；全绿则提交 syma 并 bump 超项目，勾选/更新 `docs/PROGRESS.md`；红则先修。
+4. 若门禁绿且无进行中工作：按 `docs/NEXT_ACTIONS.md` 缺口，挑 8–16 个不冲突的工作流 fan out subagent（一人一文件），要求各自跑 check/lib/语料，不提交。
+5. 简短汇报：状态、完成轮次、下一步。若一切就绪且无新工作，就说明并等待。
