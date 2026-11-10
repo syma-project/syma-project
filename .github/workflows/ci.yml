@@ -8,13 +8,21 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_MIN_STACK: 134217728
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -37,9 +45,12 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     needs: check
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -62,9 +73,12 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: check
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -84,6 +98,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - name: cargo fmt
-        run: cargo fmt --check
+        run: cargo fmt --all --check
       - name: cargo clippy
         run: cargo clippy --locked --workspace -- -D warnings
