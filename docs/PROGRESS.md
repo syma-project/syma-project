@@ -87,5 +87,17 @@
 
 ## 已完成提交（近期）
 
-- `674db1e` dedupe + expanded gaps（R4 部分，前序）
+- `9404b1e` 大幅深度波（检查点，门禁全绿：fmt+clippy+workspace+语料31）
+- `674db1e` dedupe + expanded gaps（前序）
+
+## 进度快照（checkpoint `9404b1e`，门禁全绿）
+
+**本轮已完成并回报的轮次**：R1 Rubi 伪规则｜R2 `Integrate[x^x]`｜R3 flaky｜R4 去重(~60处)｜R8 无穷级数｜R10/R11 Limit/Series｜R22 NIntegrate(G7-K15)｜R24/R25 DSolve｜R36/R37 Reduce CAD-lite｜R44/R49 三角+假设｜R61 MeijerG｜R64/R65 数论(Pollard)｜R70 离散变换(FFT)｜R76 张量｜R85 拟合｜R86 时间序列｜R87 随机｜R89 ML-lite｜R91/R92 图论｜R93 几何｜R94 单位(精确折算)｜R95 日期｜R96 字符串模式｜R102 消息系统。
+
+**指标**（checkpoint 实测）：`--lib` 3520 全过；workspace 4245 全过；`wl_math` 31 类全绿；fmt/clippy `-D warnings` 干净。
+
+**遗留 item（下一轮）**：Rubi 符号指数形 `x^m(a+b x^n)^p` 及 `1/(1+x^2)^2` 等仍循环（移植丢 `_.` 可选点）；`Direction->1` 语义与 WL 文档相反；`calculusmore` 2 个序列测试疑顺序相关（需 ≥128MB 栈）。
+
+**仍进行中**：R43/R45/R46/R47/R50/R51/R52/R53/R54/R55/R56/R58/R59/R62/R63/R66/R67/R68/R69/R71-75/R77/R78/R81-84/R88/R90/R97/R98/R99/R100/R101/R103-112/R113-128 的部分。
+
 - 访问实时：`git -C syma log --oneline -10`
