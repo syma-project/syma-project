@@ -1,4 +1,4 @@
-# NEXT_ACTIONS (auto-generated 2026-11-11 01:30:01 +08)
+# NEXT_ACTIONS (auto-generated 2026-11-11 06:00:01 +08)
 
 由 scripts/progress_check.sh 依据 docs/wl-list.txt 缺口生成；按类别聚类，映射到建议文件。
 每次检查覆盖写入；人工可在下方“Manual notes”追加。
