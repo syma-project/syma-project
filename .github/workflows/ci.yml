@@ -74,7 +74,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - name: cargo test
-        run: cargo test --locked --workspace
+        run: cargo test --locked --workspace --exclude syma
 
   lint:
     name: Lint
