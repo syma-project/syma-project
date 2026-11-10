@@ -63,7 +63,7 @@
 ### Phase 5–10
 - [ ] 见计划（R71–R128）
 
-## 进行中（agent 工作流）
+## 进行中（agent 工作流，共 18）
 
 | 轮次 | 文件（owner） | 备注 |
 |---|---|---|
@@ -72,10 +72,18 @@
 | R4 | `mod.rs`(独占) + 重复源 | 去重 |
 | R8 | `list.rs` (Sum 区) | 无穷级数 |
 | R10/R11 | `symbolicmanip.rs` (Limit 区) | 极限深度 |
+| R22 | `eval/numeric.rs` | NIntegrate 自适应/无穷 |
 | R24/R25 | `dsolve.rs` | DSolve 扩类 |
 | R36/R37 | `polyreduce.rs` | Reduce CAD-lite |
 | R44/R49 | `symbolic.rs` (Simplify 区), `expression.rs` | 三角/假设 |
 | R61 | `specialfuncmore.rs` | MeijerG |
+| R64/R65 | `number_theory.rs` | 因数/符号/连分数 |
+| R85 | `fit.rs` | 拟合/插值 |
+| R86 | `timeseries.rs` | 时间序列运算 |
+| R91/R92 | `graphtheory.rs` | 加权路径/流/生成器 |
+| R93 | `regions.rs` | 几何/区域测度 |
+| R94 | `units.rs` | 量纲分析 |
+| R95 | `calendar.rs` | 日期/时区 |
 
 ## 已完成提交（近期）
 
