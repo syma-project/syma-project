@@ -15,5 +15,6 @@ total=$(cut -f1 "$LIST" | sort -u | wc -l)
 miss=$(comm -23 <(cut -f1 "$LIST" | sort -u) "$have" | wc -l)
 echo "coverage: $((total-miss))/$total present, MISSING=$miss"
 echo "--- missing (name<TAB>category) ---"
-comm -23 <(cut -f1 "$LIST" | sort -u) "$have" | awk -F'\t' 'NR==FNR{m[$1]=1;next}{print}' - "$LIST" 2>/dev/null | head -60
+awk -F'\t' 'NR==FNR{miss[$1]=1;next} ($1 in miss){print}' \
+  <(comm -23 <(cut -f1 "$LIST" | sort -u) "$have") "$LIST" | head -80
 rm -f "$have"
